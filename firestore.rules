@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+    
+    function isAgent() {
+      return isAuthenticated() && getUserRole() == 'agent';
+    }
+    
+    function isOperator() {
+      return isAuthenticated() && getUserRole() == 'operator';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isAdmin() || isOwner(userId));
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin();
+    }
+    
+    // Services collection
+    match /services/{serviceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Economic operators collection
+    match /economic-operators/{operatorId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isAgent() || 
+        (isOperator() && resource.data.userId == request.auth.uid)
+      );
+      allow create: if isAuthenticated() && (isAdmin() || isAgent() || isOperator());
+      allow update: if isAdmin() || (isOperator() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    
+    // Payment requests collection
+    match /payment-requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isAgent() ||
+        (isOperator() && resource.data.operatorId == request.auth.uid)
+      );
+      allow create: if isAuthenticated() && (isAdmin() || isAgent());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Payments collection
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isAgent() ||
+        (isOperator() && resource.data.operatorId == request.auth.uid)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if false; // Never allow deletion of payments
+    }
+    
+    // Audit logs collection
+    match /audit-logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if true; // System can create
+      allow update, delete: if false; // Audit logs are immutable
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
