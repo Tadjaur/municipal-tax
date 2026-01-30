@@ -1,5 +1,8 @@
+/* biome-ignore lint/suspicious/noUnknownAtRules: i don't know how to fix this lint */
 @tailwind base;
+/* biome-ignore lint/suspicious/noUnknownAtRules: i don't know how to fix this lint */
 @tailwind components;
+/* biome-ignore lint/suspicious/noUnknownAtRules: i don't know how to fix this lint */
 @tailwind utilities;
 
 :root {
